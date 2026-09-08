@@ -12,7 +12,7 @@ import {
   AlertDialogFooter,
 } from '@/components/ui/alert-dialog';
 import {
-  BookOpen,
+  Layers,
   ArrowRight,
   ArrowLeft,
   Heart,
@@ -257,12 +257,12 @@ export default function Page() {
       <header className="topbar">
         <span className="brand">
           <span className="brand-icon">
-            <BookOpen size={22} />
+            <Layers size={22} />
           </span>{' '}
           time capsule<span className="brand-dot">.</span>
         </span>
         <span className="prototype-label">
-          THE FIRST CHAPTER <span>•</span> PROTOTYPE
+          YOUR LIFE. YOUR ERA. <span>•</span> PROTOTYPE
         </span>
         <button
           className="primary small"
@@ -274,15 +274,14 @@ export default function Page() {
       <main className="workspace">
         <div className="page-heading">
           <div>
-            <p className="eyebrow">A LITTLE PIECE OF YOU</p>
-            <h1>Your life, in pages.</h1>
+            <p className="eyebrow">TIME CAPSULE / RIGHT NOW</p>
+            <h1>Your current era.</h1>
             <p className="subtext">
-              The big moments. The little favorites. Everything that makes this
-              chapter yours.
+              Your people. Your obsessions. Your life lately. Keep it all here.
             </p>
           </div>
           <span className="handwritten heading-note">
-            Keep a little of today.
+            <Sparkles size={18} /> 100% you
           </span>
         </div>
         <div className="workspace-grid">
@@ -304,27 +303,33 @@ export default function Page() {
               </TabsList>
               <TabsContent value="scrapbook">
                 <article className="scrapbook">
-                  <div className="binding" aria-hidden="true" />
                   <div className="paper-content">
-                    <div className="chapter-meta">
-                      <span>CHAPTER 01</span>
-                      <span>SEPTEMBER 2026</span>
+                    <div className="profile-cover">
+                      <div className="profile-header">
+                        <span className="profile-avatar" aria-hidden="true">
+                          {name.trim().slice(0, 1).toUpperCase() || 'Y'}
+                        </span>
+                        <div>
+                          <p className="belonging">
+                            {name ? `${name}’s capsule` : 'Your capsule'}
+                          </p>
+                          <p className="profile-date">
+                            September 2026 · {demo ? 'Sample' : 'Draft'}
+                          </p>
+                        </div>
+                        <span className="era-sticker">IN MY ERA ✦</span>
+                      </div>
+                      <h2>{title || 'This is me, lately.'}</h2>
                     </div>
-                    <p className="handwritten belonging">
-                      {name ? `${name}’s time capsule` : 'Your time capsule'}
-                    </p>
-                    <h2>{title || 'A chapter worth keeping'}</h2>
-                    <div className="paper-rule" />
                     {photoVisible && (
                       <figure className="polaroid">
-                        <span className="tape" aria-hidden="true" />
                         <img
                           src={photo}
                           alt="People spending an afternoon beside a lake surrounded by evergreen trees"
                           onError={() => setPhotoVisible(false)}
                         />
                         <figcaption className="handwritten">
-                          An afternoon with nowhere else to be.
+                          Offline. Outside. Exactly where I want to be.
                         </figcaption>
                       </figure>
                     )}
@@ -342,7 +347,7 @@ export default function Page() {
                           key={q}
                         >
                           <span className="eyebrow">
-                            {i ? 'ON THE HORIZON' : 'CURRENTLY LOVING'}
+                            {i ? 'UP NEXT ↗' : 'ON REPEAT ♡'}
                           </span>
                           <p>
                             {answers[q] ||
@@ -436,24 +441,23 @@ export default function Page() {
           </section>
           <aside className="details-panel">
             <section className="start-card">
-              <span className="section-number">01 / START SMALL</span>
-              <h2>A few words are enough.</h2>
-              <p>Three little questions to capture where you are right now.</p>
+              <span className="section-number">THE QUICK INTRO</span>
+              <h2>Catch your current vibe.</h2>
+              <p>Three quick questions. The you of right now.</p>
               <button className="primary" onClick={() => setStart(true)}>
-                {demo ? 'Try the starter questions' : 'Continue the basics'}
+                {demo ? 'Try it out' : 'Keep going'}
                 <ArrowRight size={17} />
               </button>
             </section>
             <section className="category-section">
               <div className="section-heading">
                 <div>
-                  <span className="section-number">02 / MAKE IT YOURS</span>
-                  <h2>There’s more to your story.</h2>
+                  <span className="section-number">THE REST IS ALL YOU</span>
+                  <h2>What’s your thing?</h2>
                 </div>
               </div>
               <p className="subtext">
-                Pick a chapter. Add a little now, or come back to it later.
-                Everything here is optional.
+                Tap a category. Drop a memory. Skip anything.
               </p>
               <div className="category-grid">
                 {categories.map((c, i) => {

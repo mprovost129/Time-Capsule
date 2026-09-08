@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import './globals.css';
 export const metadata: Metadata = {
-  title: 'Time Capsule — Your life, in pages',
+  title: 'Time Capsule — Your current era',
   description:
-    'A personal scrapbook for the little things that make this chapter yours.',
+    'Your people, your obsessions, your life lately. Capture your current era.',
 };
 export default function RootLayout({
   children,
@@ -14,3 +14,4 @@ export default function RootLayout({
     </html>
   );
 }
+

@@ -4,14 +4,14 @@ Living project plan • Updated September 8, 2026 • For Mike and Tanya
 
 ## Confirmed decisions
 
-- Visual direction: warm, modern scrapbook.
+- Visual direction: expressive, contemporary digital scrapbook inspired by the energy Tanya likes in Snapchat and Instagram. This supersedes the initial warm paper aesthetic.
 - Start with a few short profile questions; additional questions are optional and grouped into categories.
 - Users can return to those categories at their leisure while the capsule is a draft.
 - Keep the product map, MVP scope, decisions, and progress in this local file. Update the checklist as work is completed; distinguish proposed scope from confirmed decisions.
 
 ## Visual direction
 
-Use warm paper tones, photo frames, restrained handwritten accents, and scrapbook-style captions. Keep body text easy to read, controls clear, contrast accessible, and phone layouts uncluttered. Decorative paper and tape details should support the memories. Start with one cohesive scrapbook theme; the two proposed alter ego styles belong inside that theme.
+Use bold sans-serif typography, vivid violet/pink and lime accents, a profile-style capsule header, large rounded photos, sticker-like captions, and colorful category icons. Keep the scrapbook as a collection of personal memories while giving it a current social-app feel. Use familiar, short prompts and generous touch targets. Keep controls readable and phone layouts uncluttered. This is aesthetic inspiration: feeds, messaging, likes, followers, and public sharing remain outside MVP scope. Tanya owns the creative direction.
 
 ## Product promise
 
@@ -159,7 +159,7 @@ Tanya: shape the prompts, emotional tone, card styles, and tester feedback. Mike
 ## Build checklist
 
 - [x] Retrieve Tanya's original idea and document the initial MVP.
-- [x] Confirm scrapbook visual direction.
+- [x] Confirm scrapbook concept and apply Tanya's updated social-app visual direction.
 - [x] Map the screens and separate quick start from optional categories.
 - [x] Save the scope and tracking plan locally.
 - [x] Build the first scrapbook experience prototype with sample content.
@@ -175,6 +175,7 @@ Next work item: review the scrapbook prototype with Mike and Tanya, then impleme
 
 ## Prototype delivery status — September 8, 2026
 
+- Design revision: replaced paper textures, book binding, muted colors, and serif headings with a vivid profile cover, bold typography, rounded photo cards, sticker captions, lime actions, and more conversational copy. Starter questions and all ten optional categories retain their existing behavior.
 - Implemented warm scrapbook layout, a fictional sample capsule, three starter prompts, ten optional categories with three questions each, live scrapbook rendering, answer editing, and JSON download.
 - Category answer counts update as users type; blank optional categories stay out of the scrapbook. Starting fresh from a personal draft offers a download and confirmation first.
 - Uses accessible installed dialog and tab primitives, responsive layouts, reduced-motion support, and a sample photo with source attribution.
