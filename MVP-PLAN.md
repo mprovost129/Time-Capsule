@@ -165,25 +165,32 @@ Tanya: shape the prompts, emotional tone, card styles, and tester feedback. Mike
 - [x] Build the first scrapbook experience prototype with sample content.
 - [x] Implement the three-question starter and optional category navigation.
 - [ ] Review the experience and wording with Mike and Tanya.
-- [ ] Choose storage, authentication, and AI providers; estimate operating costs.
-- [ ] Implement persistent drafts, photos, and account access.
+- [x] Implement D1 draft storage, R2 photo storage, and Sites identity checks.
+- [ ] Choose AI provider and estimate operating costs; review hosting costs before pilot.
+- [x] Implement and test persistent drafts and photo uploads locally.
+- [ ] Publish privately and verify hosted account access and cross-device behavior.
 - [ ] Implement alter ego creation and review.
-- [ ] Implement sealing, library, export, and deletion.
+- [x] Implement draft library, JSON answer export, original photo downloads, and deletion.
+- [ ] Implement sealing and a complete portable backup/import flow.
 - [ ] Verify quality gates and run the invited pilot.
 
-Next work item: review the scrapbook prototype with Mike and Tanya, then implement persistent drafts and photo uploads. The prototype source is in `prototype/`.
+Next work items: review saved drafts/photos with Mike and Tanya; obtain authorization for the private source upload and publish; then implement sealing and the alter ego creation flow. The source is in `prototype/`.
 
 ## Prototype delivery status — September 8, 2026
 
 - Design revision: replaced paper textures, book binding, muted colors, and serif headings with a vivid profile cover, bold typography, rounded photo cards, sticker captions, lime actions, and more conversational copy. Starter questions and all ten optional categories retain their existing behavior.
 - Implemented warm scrapbook layout, a fictional sample capsule, three starter prompts, ten optional categories with three questions each, live scrapbook rendering, answer editing, and JSON download.
-- Category answer counts update as users type; blank optional categories stay out of the scrapbook. Starting fresh from a personal draft offers a download and confirmation first.
+- Category answer counts update as users type; blank optional categories stay out of the scrapbook. Creating a new draft first saves the current one and retains it in the library.
 - Uses accessible installed dialog and tab primitives, responsive layouts, reduced-motion support, and a sample photo with source attribution.
-- This is an experience prototype: edits are in memory for the open page only. The interface explicitly explains this. Persistent saving, photo uploads, accounts, sealing, capsule library, and AI generation are not implemented yet.
+- Saved draft update: D1-backed records, serialized autosave with revision conflicts, save/error indicators, explicit restore of the saved version, editable date, multiple drafts, and confirmed deletion. Records are scoped to the Sites authenticated user ID.
+- Photos: R2-backed original files, up to 10 per capsule and 10 MB each; JPEG/PNG/WebP validation, bounded requests, captions, cover selection, gallery, original downloads, and deletion. HEIC conversion is not included. JSON export contains answers and photo metadata; image originals are downloaded separately.
+- Local development uses the Sites shared test identity after selecting Enable saved capsules. Data lives in ignored `prototype/.wrangler/state/`, independently of browser storage. All local browsers using the preview share the test profile. Hosted and local libraries are separate. Real hosted access has not yet been deployed or verified. Sealing, AI generation, and family accounts remain unimplemented.
 - Production builds passed, the TypeScript check passed, and the local preview route returned HTTP 200. Browser interaction/visual QA has not been performed.
 - Added optional `open_capsule_category` WebMCP navigation tool. No supported validation context was available, so its browser contract has not been verified.
-- Hosted publication is blocked by Sites connector transport errors on both registration and the follow-up lookup. Registration outcome is unknown; before any retry, look up the existing slug `tanyas-time-capsule` to avoid creating a duplicate. No hosted URL or project ID has been confirmed.
-- Dependency review found advisories in the generated starter. Updated React, React DOM, and RSC to 19.2.8 and Vite to 8.0.16. Installation still reports nine dependency vulnerabilities (one low, two moderate, six high); review and resolve remaining findings before a production pilot. No automatic force-upgrade was used.
+- API tests passed for independent save/read requests, stale-write rejection, impossible dates, authentication, another owner's record access/write/delete denial, cross-origin writes, upload type/count limits, original photo bytes, captions, cover selection, photo deletion, and capsule deletion. Disposable fixtures were removed. Browser UI and cross-device testing remain pending.
+- Hosting connection recovered. The earlier failed registration was confirmed absent before creating the Site. Confirmed project ID: `appgprj_6a9ff968b85c81919585f59e5969511e`, persisted in `.openai/hosting.json`. Intended private origin: `https://tanyas-time-capsule.michael-provost.chatgpt.site`. It is registered but not deployed, and no source upload succeeded.
+- Publishing blocker: automatic approval review rejected pushing source to the private Sites repository because external source upload to that destination was not specifically user-authorized. Await explicit authorization before another push. Do not work around the rejection. Tanya has not been granted access.
+- Dependency review: React/React DOM/RSC are 19.2.8 and Vite is 8.0.16. After adding the database migration tooling, installation reports 12 dependency vulnerabilities (six moderate, six high). Review and resolve findings before a wider production pilot; no force-upgrade was used.
 
 ## Remaining assumptions
 

@@ -1,0 +1,1 @@
+INSERT INTO capsules (id,owner,name,title,date,answers,revision,updated_at) VALUES ('f122a743-92ee-4c6b-9f37-000000000001','integration-other-owner','Private test','Access fixture','2026-09-08','{}',1,'2026-09-08T12:00:00.000Z');

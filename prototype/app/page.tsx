@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
+import { useCapsules } from '@/hooks/use-capsules';
+import type { Capsule, Photo } from '@/lib/capsule-types';
+import { PhotoManager } from '@/components/capsule/photo-manager';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -29,6 +32,8 @@ import {
   Sparkles,
   Check,
   Download,
+  Library,
+  Trash2,
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
@@ -160,17 +165,31 @@ const sample = {
 const photo =
   'https://images.unsplash.com/photo-1726198576670-31e06b15c39f?auto=format&fit=crop&w=1200&q=85';
 export default function Page() {
-  const [name, setName] = useState(sample.name),
-    [title, setTitle] = useState(sample.title),
-    [answers, setAnswers] = useState<Record<string, string>>(sample.answers);
+  const storage = useCapsules({
+    ...sample,
+    id: 'sample',
+    date: '2026-09-08',
+    coverId: null,
+    revision: 0,
+    updatedAt: '',
+  });
+  const { draft, change, flush } = storage;
+  const { name, title, answers } = draft;
+  const setName = (value: string) => change({ name: value });
+  const setTitle = (value: string) => change({ title: value });
+  const demo = draft.id === 'sample';
+  const canEdit = storage.ready && storage.signedIn;
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [reloadOpen, setReloadOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false),
+    [deleting, setDeleting] = useState<Capsule | null>(null),
+    [working, setWorking] = useState(false);
   const [tab, setTab] = useState('scrapbook'),
     [active, setActive] = useState<number | null>(null),
     [start, setStart] = useState(false),
-    [demo, setDemo] = useState(true),
     [photoVisible, setPhotoVisible] = useState(true);
   const [message, setMessage] = useState(''),
     [notice, setNotice] = useState(false);
-  const [resetOpen, setResetOpen] = useState(false);
   useEffect(() => {
     const context = (
       document as Document & {
@@ -228,20 +247,26 @@ export default function Page() {
     return () => lifecycle.abort();
   }, []);
   const update = (q: string, v: string) =>
-    setAnswers((a) => ({ ...a, [q]: v }));
+    change({ answers: { ...answers, [q]: v } });
   const count = Object.values(answers).filter((v) => v.trim()).length;
-  function begin() {
-    setName('');
-    setTitle('');
-    setAnswers({});
-    setDemo(false);
-    setPhotoVisible(false);
-    setStart(true);
-    setTab('scrapbook');
+  async function begin() {
+    setWorking(true);
+    setMessage('');
+    try {
+      await storage.begin();
+
+      setStart(true);
+      setTab('scrapbook');
+      setLibraryOpen(false);
+    } catch (e) {
+      setMessage((e as Error).message);
+    } finally {
+      setWorking(false);
+    }
   }
   function download() {
     const blob = new Blob(
-      [JSON.stringify({ name, title, answers, prototype: true }, null, 2)],
+      [JSON.stringify({ ...draft, photos, prototype: true }, null, 2)],
       { type: 'application/json' },
     );
     const url = URL.createObjectURL(blob);
@@ -250,7 +275,9 @@ export default function Page() {
     a.download = 'my-time-capsule.json';
     a.click();
     URL.revokeObjectURL(url);
-    setMessage('Your answers have been downloaded.');
+    setMessage(
+      'Your answers and photo captions have been downloaded. Image files are separate.',
+    );
   }
   return (
     <div className="app-shell">
@@ -264,14 +291,75 @@ export default function Page() {
         <span className="prototype-label">
           YOUR LIFE. YOUR ERA. <span>•</span> PROTOTYPE
         </span>
-        <button
-          className="primary small"
-          onClick={() => (demo ? begin() : setResetOpen(true))}
-        >
-          <Plus size={17} /> New capsule
-        </button>
+        <div className="header-actions">
+          <button
+            className="text-button"
+            disabled={!canEdit || working}
+            onClick={() => setLibraryOpen(true)}
+          >
+            <Library size={18} /> My capsules
+          </button>
+          <button
+            className="primary small"
+            disabled={!canEdit || working}
+            onClick={() => void begin()}
+          >
+            <Plus size={17} /> New capsule
+          </button>
+        </div>
       </header>
       <main className="workspace">
+        {!storage.ready && (
+          <p role="status" className="storage-banner">
+            Loading your saved capsules…
+          </p>
+        )}
+        {storage.ready && !storage.signedIn && (
+          <div className="storage-banner">
+            <div>
+              <strong>Make a capsule you can come back to.</strong>
+              <p>
+                Keep your drafts and photos together in your private library.
+              </p>
+            </div>
+            <a
+              className="primary"
+              href="/signin-with-chatgpt?return_to=%2F"
+              target="_top"
+            >
+              Enable saved capsules <ArrowRight size={17} />
+            </a>
+          </div>
+        )}
+        {(storage.error || message) && (
+          <div
+            className={
+              storage.error ? 'storage-banner error-message' : 'storage-banner'
+            }
+            role={storage.error ? 'alert' : 'status'}
+          >
+            <p>{storage.error || message}</p>
+            {storage.error && (
+              <button
+                className="text-button"
+                onClick={() => setReloadOpen(true)}
+              >
+                Restore saved version
+              </button>
+            )}
+            {storage.error && (
+              <button
+                className="text-button"
+                onClick={() => {
+                  if (storage.signedIn) void flush().catch(() => {});
+                  else window.location.reload();
+                }}
+              >
+                Retry
+              </button>
+            )}
+          </div>
+        )}
         <div className="page-heading">
           <div>
             <p className="eyebrow">TIME CAPSULE / RIGHT NOW</p>
@@ -288,9 +376,13 @@ export default function Page() {
           <section className="book-area" aria-label="Your capsule">
             <div className="book-toolbar">
               <span className="draft-label">
-                <span /> {demo ? 'Sample capsule' : 'Your draft'}
+                <span /> {demo ? 'Sample capsule' : storage.status}
               </span>
-              <button className="text-button" onClick={() => setStart(true)}>
+              <button
+                className="text-button"
+                disabled={!canEdit || working}
+                onClick={() => setStart(true)}
+              >
                 <PenLine size={16} /> Edit the basics
               </button>
             </div>
@@ -314,14 +406,20 @@ export default function Page() {
                             {name ? `${name}’s capsule` : 'Your capsule'}
                           </p>
                           <p className="profile-date">
-                            September 2026 · {demo ? 'Sample' : 'Draft'}
+                            {new Date(
+                              draft.date + 'T12:00:00',
+                            ).toLocaleDateString('en-US', {
+                              month: 'long',
+                              year: 'numeric',
+                            })}{' '}
+                            · {demo ? 'Sample' : 'Draft'}
                           </p>
                         </div>
                         <span className="era-sticker">IN MY ERA ✦</span>
                       </div>
                       <h2>{title || 'This is me, lately.'}</h2>
                     </div>
-                    {photoVisible && (
+                    {demo && photoVisible && (
                       <figure className="polaroid">
                         <img
                           src={photo}
@@ -333,6 +431,24 @@ export default function Page() {
                         </figcaption>
                       </figure>
                     )}
+                    {!demo &&
+                      photos.length > 0 &&
+                      (() => {
+                        const cover =
+                          photos.find((p) => p.id === draft.coverId) ||
+                          photos[0];
+                        return (
+                          <figure className="polaroid">
+                            <img
+                              src={'/api/photos?id=' + cover.id}
+                              alt={cover.caption || cover.filename}
+                            />
+                            {cover.caption && (
+                              <figcaption>{cover.caption}</figcaption>
+                            )}
+                          </figure>
+                        );
+                      })()}
                     <div className="memory-note">
                       <p className="eyebrow">LIFE, RIGHT NOW</p>
                       <p>
@@ -379,6 +495,28 @@ export default function Page() {
                         )
                       );
                     })}
+                    {!demo && photos.length > 1 && (
+                      <section
+                        className="memory-gallery"
+                        aria-label="More capsule photos"
+                      >
+                        {photos
+                          .filter(
+                            (p) => p.id !== (draft.coverId || photos[0]?.id),
+                          )
+                          .map((p) => (
+                            <figure key={p.id}>
+                              <img
+                                src={'/api/photos?id=' + p.id}
+                                alt={p.caption || p.filename}
+                              />
+                              {p.caption && (
+                                <figcaption>{p.caption}</figcaption>
+                              )}
+                            </figure>
+                          ))}
+                      </section>
+                    )}
                     <footer className="paper-footer">
                       <span>THIS IS ME, RIGHT NOW.</span>
                       <Heart size={16} />
@@ -405,10 +543,22 @@ export default function Page() {
                   <p className="subtext">
                     Edit anything here. Your scrapbook changes with you.
                   </p>
+                  <label className="field">
+                    Capsule date
+                    <input
+                      disabled={!canEdit}
+                      type="date"
+                      value={draft.date}
+                      onChange={(e) => {
+                        if (e.target.value) change({ date: e.target.value });
+                      }}
+                    />
+                  </label>
                   {starters.map((q) => (
                     <label className="field" key={q}>
                       {q}
                       <textarea
+                        disabled={!canEdit}
                         value={answers[q] || ''}
                         onChange={(e) => update(q, e.target.value)}
                         rows={2}
@@ -426,6 +576,7 @@ export default function Page() {
                               <label className="field" key={q}>
                                 {q}
                                 <textarea
+                                  disabled={!canEdit}
                                   value={answers[q]}
                                   onChange={(e) => update(q, e.target.value)}
                                   rows={2}
@@ -440,11 +591,28 @@ export default function Page() {
             </Tabs>
           </section>
           <aside className="details-panel">
+            <PhotoManager
+              key={draft.id + (draft.revision > 0 ? '-saved' : '-new')}
+              capsuleId={draft.id}
+              coverId={draft.coverId}
+              flush={flush}
+              onPhotos={setPhotos}
+              onCover={async (id) => {
+                change({ coverId: id });
+                await flush();
+              }}
+              onRemoved={storage.refresh}
+              enabled={canEdit && draft.revision > 0}
+            />
             <section className="start-card">
               <span className="section-number">THE QUICK INTRO</span>
               <h2>Catch your current vibe.</h2>
               <p>Three quick questions. The you of right now.</p>
-              <button className="primary" onClick={() => setStart(true)}>
+              <button
+                className="primary"
+                disabled={!canEdit || working}
+                onClick={() => setStart(true)}
+              >
                 {demo ? 'Try it out' : 'Keep going'}
                 <ArrowRight size={17} />
               </button>
@@ -467,6 +635,7 @@ export default function Page() {
                   return (
                     <button
                       key={c.name}
+                      disabled={!canEdit || working}
                       className={'category-card ' + c.color}
                       onClick={() => setActive(i)}
                     >
@@ -493,8 +662,9 @@ export default function Page() {
             </section>
             <div className="prototype-note">
               <p>
-                This prototype keeps edits only while this page is open.
-                Download your answers before leaving.
+                Your drafts and original photos are saved to your library.
+                Download copies of important memories. Local and hosted
+                previews use separate libraries.
               </p>
               <button className="text-button" onClick={download}>
                 <Download size={16} /> Download my answers
@@ -512,11 +682,25 @@ export default function Page() {
           <DialogDescription>
             A phrase or two is plenty. You can skip any question.
           </DialogDescription>
+          <p className="small-note" role="status">
+            {demo ? 'Example capsule' : storage.status}
+          </p>
+          {storage.error && (
+            <button className="text-button" onClick={() => setReloadOpen(true)}>
+              Restore saved version
+            </button>
+          )}
+          {storage.error && (
+            <p className="error-message" role="alert">
+              {storage.error}
+            </p>
+          )}
           <div className="dialog-fields">
             <div className="two-fields">
               <label className="field">
                 Your name
                 <input
+                  disabled={!canEdit}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="First name"
@@ -526,6 +710,7 @@ export default function Page() {
               <label className="field">
                 Chapter title
                 <input
+                  disabled={!canEdit}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="My life lately"
@@ -533,10 +718,22 @@ export default function Page() {
                 />
               </label>
             </div>
+            <label className="field">
+              Capsule date
+              <input
+                disabled={!canEdit}
+                type="date"
+                value={draft.date}
+                onChange={(e) => {
+                  if (e.target.value) change({ date: e.target.value });
+                }}
+              />
+            </label>
             {starters.map((q) => (
               <label className="field" key={q}>
                 {q}
                 <textarea
+                  disabled={!canEdit}
                   rows={2}
                   value={answers[q] || ''}
                   onChange={(e) => update(q, e.target.value)}
@@ -557,7 +754,7 @@ export default function Page() {
             <ArrowRight size={17} />
           </button>
           <p className="small-note">
-            Edits stay in this open page. Download to keep a copy.
+            Drafts save automatically to your library.
           </p>
         </DialogContent>
       </Dialog>
@@ -575,12 +772,26 @@ export default function Page() {
             Just the parts you feel like sharing. Leave the rest for another
             day.
           </DialogDescription>
+          <p className="small-note" role="status">
+            {demo ? 'Example capsule' : storage.status}
+          </p>
+          {storage.error && (
+            <button className="text-button" onClick={() => setReloadOpen(true)}>
+              Restore saved version
+            </button>
+          )}
+          {storage.error && (
+            <p className="error-message" role="alert">
+              {storage.error}
+            </p>
+          )}
           <div className="dialog-fields">
             {active !== null &&
               categories[active].prompts.map((q) => (
                 <label className="field" key={q}>
                   {q}
                   <textarea
+                    disabled={!canEdit}
                     rows={3}
                     value={answers[q] || ''}
                     onChange={(e) => update(q, e.target.value)}
@@ -610,25 +821,137 @@ export default function Page() {
           </button>
         </DialogContent>
       </Dialog>
-      <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
+      <AlertDialog open={reloadOpen} onOpenChange={setReloadOpen}>
         <AlertDialogContent>
-          <AlertDialogTitle>Start a fresh capsule?</AlertDialogTitle>
+          <AlertDialogTitle>Restore the saved version?</AlertDialogTitle>
           <AlertDialogDescription>
-            This replaces your current draft in this prototype. Download your
-            answers first if you want to keep them.
+            This discards your unsaved edits in this window. Download them first
+            if you want to keep a copy.
           </AlertDialogDescription>
           <button className="text-button" onClick={download}>
-            <Download size={16} /> Download current answers
+            <Download size={16} /> Download my edits
           </button>
+          {message && <p role="alert">{message}</p>}
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogCancel disabled={working}>
+              Keep editing
+            </AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                setResetOpen(false);
-                begin();
+              disabled={working}
+              onClick={async () => {
+                setWorking(true);
+                try {
+                  await storage.reloadSaved();
+                  setReloadOpen(false);
+                } catch (e) {
+                  setMessage((e as Error).message);
+                } finally {
+                  setWorking(false);
+                }
               }}
             >
-              Start fresh
+              Restore saved version
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <Dialog open={libraryOpen} onOpenChange={setLibraryOpen}>
+        <DialogContent className="editor-dialog">
+          <DialogTitle className="dialog-heading">
+            Your eras, saved.
+          </DialogTitle>
+          <DialogDescription>
+            Your saved draft capsules. Open one and pick up where you left off.
+          </DialogDescription>
+          <div className="capsule-library">
+            {storage.library.length === 0 ? (
+              <p>No capsules yet. Start your first one below.</p>
+            ) : (
+              storage.library.map((c) => (
+                <div key={c.id} className="library-row">
+                  <button
+                    disabled={working}
+                    onClick={async () => {
+                      setWorking(true);
+                      try {
+                        await storage.open(c.id);
+                        setLibraryOpen(false);
+
+                        setTab('scrapbook');
+                      } catch (e) {
+                        setMessage((e as Error).message);
+                      } finally {
+                        setWorking(false);
+                      }
+                    }}
+                  >
+                    <strong>
+                      {c.deleting
+                        ? 'Deletion needs retry'
+                        : c.title || 'Untitled capsule'}
+                    </strong>
+                    <span>
+                      {c.name || 'Your capsule'} · {c.date}
+                    </span>
+                    <small>
+                      {Object.values(c.answers).filter((a) => a.trim()).length}{' '}
+                      answers{draft.id === c.id ? ' · Current' : ''}
+                    </small>
+                  </button>
+                  <button
+                    className="icon-button"
+                    disabled={working}
+                    aria-label={'Delete ' + (c.title || 'untitled capsule')}
+                    onClick={() => setDeleting(c)}
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+          <button
+            disabled={working}
+            className="primary"
+            onClick={() => void begin()}
+          >
+            <Plus size={17} /> Start a new capsule
+          </button>
+        </DialogContent>
+      </Dialog>
+      <AlertDialog
+        open={!!deleting}
+        onOpenChange={(v) => {
+          if (!v && !working) setDeleting(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogTitle>Delete this capsule?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This permanently deletes this saved draft, its answers, and uploaded
+            photos. Other capsules are unaffected.
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={working}>
+              Keep capsule
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={working}
+              onClick={async () => {
+                if (!deleting) return;
+                setWorking(true);
+                try {
+                  await storage.remove(deleting.id);
+
+                  setDeleting(null);
+                } catch (e) {
+                  setMessage((e as Error).message);
+                } finally {
+                  setWorking(false);
+                }
+              }}
+            >
+              Delete capsule
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

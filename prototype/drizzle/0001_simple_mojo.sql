@@ -1,0 +1,1 @@
+ALTER TABLE `capsules` ADD `deleting` integer DEFAULT 0 NOT NULL;
